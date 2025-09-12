@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .wiki.md
 QUICK_START.md
+
+# Environment variables
+.env
+server/.env
