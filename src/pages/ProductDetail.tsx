@@ -1,0 +1,234 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { products } from '@/data/products';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, ShoppingCart, Heart, Instagram, Clock, Package, ShoppingBag } from 'lucide-react';
+import { CartItem } from '@/types/cart';
+import CartDrawer from "@/components/CartDrawer";
+
+export default function ProductDetail() {
+  const { id } = useParams();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
+  
+  const product = products.find(p => p.id === id);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('cart');
+    if (saved) {
+      setCartItems(JSON.parse(saved));
+    }
+  }, []);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-[#2B2B2B] mb-4">Product not found</h1>
+          <Button asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
+            <Link to="/shop">Back to Shop</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const addToCart = () => {
+    const newCart = [...cartItems, { ...product, quantity: 1 }];
+    setCartItems(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
+    setIsAddedToCart(true);
+    setTimeout(() => setIsAddedToCart(false), 2000);
+  };
+
+  const getAvailabilityColor = (availability: string) => {
+    switch (availability) {
+      case 'In Stock':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Made to Order':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Limited Edition':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F5C6D1]/20">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet</h1>
+                <p className="text-xs text-gray-600">Handmade with Love</p>
+              </div>
+            </Link>
+            
+            <nav className="hidden md:flex items-center space-x-6">
+              <Link to="/" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Home</Link>
+              <Link to="/shop" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Shop</Link>
+              <Link to="/about" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">About</Link>
+              <Link to="/contact" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Contact</Link>
+            </nav>
+            
+            <div className="flex items-center space-x-3">
+              <CartDrawer>
+                <Button variant="ghost" size="sm">
+                  <ShoppingBag className="w-5 h-5" />
+                </Button>
+              </CartDrawer>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
+          <Link to="/" className="hover:text-[#F5C6D1]">Home</Link>
+          <span>/</span>
+          <Link to="/shop" className="hover:text-[#F5C6D1]">Shop</Link>
+          <span>/</span>
+          <Link to={`/shop?category=${product.category}`} className="hover:text-[#F5C6D1]">{product.category}</Link>
+          <span>/</span>
+          <span className="text-[#2B2B2B]">{product.title}</span>
+        </div>
+
+        {/* Back Button */}
+        <Button variant="ghost" asChild className="mb-6">
+          <Link to="/shop">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Shop
+          </Link>
+        </Button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Product Image */}
+          <div className="space-y-4">
+            <div className="aspect-square rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm shadow-lg">
+              <img
+                src={product.imageUrl}
+                alt={product.title}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+            
+            {/* Additional product images would go here */}
+            <div className="grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-white/60 border-2 border-transparent hover:border-[#F5C6D1] cursor-pointer transition-colors">
+                  <img
+                    src={product.imageUrl}
+                    alt={`${product.title} view ${i}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Info */}
+          <div className="space-y-6">
+            <div>
+              <Badge className={`mb-3 ${getAvailabilityColor(product.availability)}`}>
+                {product.availability}
+              </Badge>
+              <Badge variant="outline" className="ml-2 text-[#2B2B2B] border-[#F5C6D1]">
+                {product.category}
+              </Badge>
+              
+              <h1 className="text-3xl font-bold text-[#2B2B2B] mb-4">{product.title}</h1>
+              
+              <div className="flex items-baseline space-x-2 mb-4">
+                <span className="text-3xl font-bold text-[#2B2B2B]">₹{product.price}</span>
+                <span className="text-sm text-gray-500">INR</span>
+              </div>
+              
+              <p className="text-gray-600 leading-relaxed">{product.shortDescription}</p>
+            </div>
+
+            {/* Product Details */}
+            <Card className="border-0 bg-white/60 backdrop-blur-sm">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Clock className="w-5 h-5 text-[#F5C6D1]" />
+                  <div>
+                    <p className="font-medium text-[#2B2B2B]">Lead Time</p>
+                    <p className="text-sm text-gray-600">{product.leadTime}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Package className="w-5 h-5 text-[#F5C6D1]" />
+                  <div>
+                    <p className="font-medium text-[#2B2B2B]">SKU</p>
+                    <p className="text-sm text-gray-600">{product.sku}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Add to Cart */}
+            <div className="space-y-4">
+              <Button
+                onClick={addToCart}
+                size="lg"
+                className="w-full bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B] text-lg py-6"
+                disabled={isAddedToCart}
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                {isAddedToCart ? 'Added to Cart!' : 'Add to Cart'}
+              </Button>
+              
+              <Button variant="outline" size="lg" className="w-full border-[#F5C6D1] text-[#2B2B2B] hover:bg-[#F5C6D1]/10">
+                <Heart className="w-5 h-5 mr-2" />
+                Add to Wishlist
+              </Button>
+            </div>
+
+            {/* Custom Order Note */}
+            <Card className="border-0 bg-gradient-to-r from-[#F5C6D1]/20 to-[#C7D8C7]/20">
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-3">
+                  <Instagram className="w-6 h-6 text-[#F5C6D1] mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-[#2B2B2B] mb-2">Want Customization?</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      DM us on Instagram for custom colors, sizes, or personalized designs.
+                    </p>
+                    <Button size="sm" asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
+                      <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
+                        Message Us
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Shipping Info */}
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>🚚 Free shipping across India</p>
+              <p>💰 Cash on Delivery available</p>
+              <p>📦 Carefully packaged with love</p>
+              <p>🔄 No returns or exchanges (handmade items)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
