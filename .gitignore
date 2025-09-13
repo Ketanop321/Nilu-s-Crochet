@@ -32,3 +32,9 @@ server/.env
 # Environment variables
 .env
 server/.env
+
+# Documentation files
+wiki.md
+QUICK_START_GUIDE.md
+documentation.md
+ 
