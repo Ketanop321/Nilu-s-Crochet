@@ -1,13 +1,136 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Instagram, ShoppingBag, Sparkles, Award, Clock, Users } from 'lucide-react';
-// import { CartDrawer } from '@/components/CartDrawer';
-import CartDrawer from "@/components/CartDrawer";
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Heart, Plus, Edit, Trash2, Package, ShoppingBag, Users, TrendingUp } from 'lucide-react';
+import { Product, categories } from '@/data/products';
 
+export default function Admin() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Flowers' as Product['category'],
+    price: '',
+    availability: 'In Stock' as Product['availability'],
+    shortDescription: '',
+    leadTime: '',
+    sku: '',
+    imageUrl: ''
+  });
 
-export default function About() {
+  useEffect(() => {
+    // Load products from localStorage or use default data
+    const savedProducts = localStorage.getItem('admin_products');
+    if (savedProducts) {
+      setProducts(JSON.parse(savedProducts));
+    } else {
+      // Import default products
+      import('@/data/products').then(({ products: defaultProducts }) => {
+        setProducts(defaultProducts);
+        localStorage.setItem('admin_products', JSON.stringify(defaultProducts));
+      });
+    }
+  }, []);
+
+  const saveProducts = (newProducts: Product[]) => {
+    setProducts(newProducts);
+    localStorage.setItem('admin_products', JSON.stringify(newProducts));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      category: 'Flowers',
+      price: '',
+      availability: 'In Stock',
+      shortDescription: '',
+      leadTime: '',
+      sku: '',
+      imageUrl: ''
+    });
+    setEditingProduct(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const productData: Product = {
+      id: editingProduct?.id || `P${String(products.length + 1).padStart(3, '0')}`,
+      title: formData.title,
+      category: formData.category,
+      price: parseInt(formData.price),
+      availability: formData.availability,
+      shortDescription: formData.shortDescription,
+      leadTime: formData.leadTime,
+      sku: formData.sku,
+      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop'
+    };
+
+    if (editingProduct) {
+      // Update existing product
+      const newProducts = products.map(p => p.id === editingProduct.id ? productData : p);
+      saveProducts(newProducts);
+    } else {
+      // Add new product
+      saveProducts([...products, productData]);
+    }
+
+    resetForm();
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      title: product.title,
+      category: product.category,
+      price: product.price.toString(),
+      availability: product.availability,
+      shortDescription: product.shortDescription,
+      leadTime: product.leadTime,
+      sku: product.sku,
+      imageUrl: product.imageUrl
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleDelete = (productId: string) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      const newProducts = products.filter(p => p.id !== productId);
+      saveProducts(newProducts);
+    }
+  };
+
+  const stats = {
+    totalProducts: products.length,
+    inStock: products.filter(p => p.availability === 'In Stock').length,
+    madeToOrder: products.filter(p => p.availability === 'Made to Order').length,
+    limitedEdition: products.filter(p => p.availability === 'Limited Edition').length
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
       {/* Header */}
@@ -19,222 +142,302 @@ export default function About() {
                 <Heart className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet</h1>
-                <p className="text-xs text-gray-600">Handmade with Love</p>
+                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet Admin</h1>
+                <p className="text-xs text-gray-600">Product Management</p>
               </div>
             </Link>
             
             <nav className="hidden md:flex items-center space-x-6">
               <Link to="/" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Home</Link>
               <Link to="/shop" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Shop</Link>
-              <Link to="/about" className="text-[#F5C6D1] font-medium">About</Link>
-              <Link to="/contact" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Contact</Link>
+              <span className="text-[#F5C6D1] font-medium">Admin</span>
             </nav>
             
-            <div className="flex items-center space-x-3">
-              <CartDrawer>
-                <Button variant="ghost" size="sm">
-                  <ShoppingBag className="w-5 h-5" />
-                </Button>
-              </CartDrawer>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-5 h-5" />
-                </a>
-              </Button>
-            </div>
+            <Button asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
+              <Link to="/">Back to Site</Link>
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center space-x-2 mb-6">
-            <Sparkles className="w-6 h-6 text-[#F5C6D1]" />
-            <Badge className="bg-[#F5C6D1]/20 text-[#2B2B2B] border-[#F5C6D1]">
-              Our Story
-            </Badge>
-            <Sparkles className="w-6 h-6 text-[#F5C6D1]" />
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold text-[#2B2B2B] mb-6">
-            About
-            <span className="block text-transparent bg-gradient-to-r from-[#F5C6D1] to-[#C7D8C7] bg-clip-text">
-              Nilu' Crochet
-            </span>
-          </h1>
-          
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Welcome to Nilu' Crochet, where every stitch tells a story of passion, creativity, and love. 
-            We create beautiful handmade crochet pieces that bring joy and warmth to your life.
-          </p>
+      <div className="container mx-auto px-4 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-[#2B2B2B] mb-2">Product Management</h1>
+          <p className="text-gray-600">Manage your crochet product catalog</p>
         </div>
 
-        {/* Story Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-[#2B2B2B]">Our Journey</h2>
-            <div className="space-y-4 text-gray-600">
-              <p>
-                Nilu' Crochet began as a passionate hobby that blossomed into a heartfelt business. 
-                What started with simple patterns and basic stitches has evolved into intricate designs 
-                that capture the essence of handmade artistry.
-              </p>
-              <p>
-                Each piece in our collection is carefully crafted with premium yarns and attention to detail. 
-                We believe that handmade items carry a special energy - the love and care of the maker's hands, 
-                creating something truly unique for every customer.
-              </p>
-              <p>
-                From delicate flower brooches to cozy accessories, every creation reflects our commitment 
-                to quality, creativity, and the timeless art of crochet.
-              </p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Products</p>
+                  <p className="text-2xl font-bold text-[#2B2B2B]">{stats.totalProducts}</p>
+                </div>
+                <Package className="w-8 h-8 text-[#F5C6D1]" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">In Stock</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.inStock}</p>
+                </div>
+                <ShoppingBag className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Made to Order</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.madeToOrder}</p>
+                </div>
+                <Users className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Limited Edition</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.limitedEdition}</p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Add Product Button */}
+        <div className="mb-6">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]"
+                onClick={() => {
+                  resetForm();
+                  setIsAddDialogOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Product
+              </Button>
+            </DialogTrigger>
+            
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="title">Product Title *</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="category">Category *</Label>
+                    <Select value={formData.category} onValueChange={(value) => handleSelectChange('category', value)}>
+                      <SelectTrigger className="border-[#F5C6D1]/30">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(category => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price">Price (₹) *</Label>
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      required
+                      className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="availability">Availability *</Label>
+                    <Select value={formData.availability} onValueChange={(value) => handleSelectChange('availability', value)}>
+                      <SelectTrigger className="border-[#F5C6D1]/30">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="In Stock">In Stock</SelectItem>
+                        <SelectItem value="Made to Order">Made to Order</SelectItem>
+                        <SelectItem value="Limited Edition">Limited Edition</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="shortDescription">Short Description *</Label>
+                  <Textarea
+                    id="shortDescription"
+                    name="shortDescription"
+                    value={formData.shortDescription}
+                    onChange={handleInputChange}
+                    required
+                    className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="leadTime">Lead Time *</Label>
+                    <Input
+                      id="leadTime"
+                      name="leadTime"
+                      value={formData.leadTime}
+                      onChange={handleInputChange}
+                      required
+                      className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                      placeholder="e.g., 7-10 days, In Stock"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="sku">SKU *</Label>
+                    <Input
+                      id="sku"
+                      name="sku"
+                      value={formData.sku}
+                      onChange={handleInputChange}
+                      required
+                      className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                      placeholder="e.g., NC-FL-001"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleInputChange}
+                    className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
+                    placeholder="https://example.com/image.jpg (optional - will use default if empty)"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      resetForm();
+                      setIsAddDialogOpen(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
+                    {editingProduct ? 'Update Product' : 'Add Product'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Products Table */}
+        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-[#2B2B2B]">Products ({products.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <div className="space-y-4">
+                {products.map((product) => (
+                  <div key={product.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.title}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-medium text-[#2B2B2B] truncate">{product.title}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {product.category}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">{product.shortDescription}</p>
+                      <div className="flex items-center space-x-4 mt-2 text-sm">
+                        <span className="font-semibold text-[#2B2B2B]">₹{product.price}</span>
+                        <span className="text-gray-500">{product.sku}</span>
+                        <Badge 
+                          className={`text-xs ${
+                            product.availability === 'In Stock' 
+                              ? 'bg-green-100 text-green-800' 
+                              : product.availability === 'Made to Order'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                          }`}
+                        >
+                          {product.availability}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(product)}
+                        className="text-[#F5C6D1] hover:text-[#F5C6D1]/80"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(product.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center justify-center">
-            <Card className="border-0 bg-white/60 backdrop-blur-sm shadow-lg overflow-hidden">
-              <CardContent className="p-0">
-                <div className="aspect-square bg-gradient-to-br from-[#F5C6D1]/30 to-[#C7D8C7]/30 flex items-center justify-center">
-                  <div className="text-center">
-                    <Heart className="w-16 h-16 text-[#F5C6D1] mx-auto mb-4" />
-                    <p className="text-[#2B2B2B] font-medium">Founder Photo</p>
-                    <p className="text-sm text-gray-600">Coming Soon</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Values Section */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-center text-[#2B2B2B] mb-12">What Makes Us Special</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="border-0 bg-white/60 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                  <Heart className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#2B2B2B] mb-4">Handmade with Love</h3>
-                <p className="text-gray-600">
-                  Every piece is carefully crafted by hand, ensuring unique character and personal touch in each creation.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 bg-white/60 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                  <Award className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#2B2B2B] mb-4">Premium Quality</h3>
-                <p className="text-gray-600">
-                  We use only the finest yarns and materials to ensure durability and beauty in every product.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 bg-white/60 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                  <Users className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#2B2B2B] mb-4">Custom Orders</h3>
-                <p className="text-gray-600">
-                  We love creating personalized pieces. DM us on Instagram for custom colors, sizes, and designs.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Process Section */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-center text-[#2B2B2B] mb-12">Our Process</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { step: "1", title: "Design", description: "We sketch and plan each unique pattern" },
-              { step: "2", title: "Select", description: "Choose premium yarns and materials" },
-              { step: "3", title: "Create", description: "Hand-crochet with love and attention" },
-              { step: "4", title: "Deliver", description: "Package carefully and ship to you" }
-            ].map((item, index) => (
-              <Card key={index} className="border-0 bg-white/60 backdrop-blur-sm shadow-lg">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-4 bg-[#F5C6D1] rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">{item.step}</span>
-                  </div>
-                  <h3 className="font-semibold text-[#2B2B2B] mb-2">{item.title}</h3>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="text-center bg-gradient-to-r from-[#F5C6D1]/20 to-[#C7D8C7]/20 rounded-2xl p-12">
-          <h2 className="text-3xl font-bold text-[#2B2B2B] mb-4">Ready to Explore Our Collection?</h2>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Discover our handcrafted crochet pieces and find the perfect addition to your collection. 
-            Each item is made with love and attention to detail.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
-              <Link to="/shop">Shop Collection</Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild className="border-[#F5C6D1] text-[#2B2B2B] hover:bg-[#F5C6D1]/10">
-              <Link to="/contact">Get in Touch</Link>
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-[#2B2B2B] text-white py-12 px-4 mt-16">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                  <Heart className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-bold">Nilu' Crochet</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Handmade crochet products crafted with love and care. Each piece is unique and made to order.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Quick Links</h3>
-              <div className="space-y-2 text-sm">
-                <Link to="/shop" className="block text-gray-400 hover:text-white transition-colors">Shop</Link>
-                <Link to="/about" className="block text-gray-400 hover:text-white transition-colors">About</Link>
-                <Link to="/contact" className="block text-gray-400 hover:text-white transition-colors">Contact</Link>
-                <Link to="/policies" className="block text-gray-400 hover:text-white transition-colors">Policies</Link>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Connect</h3>
-              <div className="space-y-2 text-sm">
-                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-white transition-colors">
-                  Instagram
-                </a>
-                <p className="text-gray-400">DM for custom orders</p>
-                <p className="text-gray-400">India-wide delivery</p>
-                <p className="text-gray-400">Cash on Delivery available</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 Nilu' Crochet. All rights reserved. Made with ❤️ in India.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
