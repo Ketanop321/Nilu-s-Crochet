@@ -1,10 +1,9 @@
-import { Product } from '@/data/products';
+import { Product } from '@/types/product';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (product: Product) => void;

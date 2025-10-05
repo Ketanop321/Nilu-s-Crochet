@@ -1,97 +1,73 @@
 import { useState, useEffect } from 'react';
-import { products, categories } from '@/data/products';
+import { categories } from '@/data/products';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Instagram, Heart, Sparkles, LogIn, User } from 'lucide-react';
+import { Instagram, Heart, Sparkles } from 'lucide-react';
 import { CartItem } from '@/types/cart';
-import CartDrawer from '@/components/CartDrawer';
 import { useAuth } from '@/contexts/AuthContext';
+import Header from '@/components/Header';
+import { productsAPI } from '@/lib/api';
+import { toast } from 'sonner';
+import { Product } from '@/types/product';
+import { transformProducts } from '@/lib/transformProduct';
 
 export default function Index() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const { user, logout } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   
   useEffect(() => {
     const saved = localStorage.getItem('cart');
     if (saved) {
       setCartItems(JSON.parse(saved));
     }
+    loadProducts();
   }, []);
 
-  const addToCart = (product: CartItem) => {
-    const newCart = [...cartItems, { ...product, quantity: 1 }];
+  const loadProducts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await productsAPI.getAll();
+      const productsData = transformProducts(response.data.data || []);
+      if (!productsData.length) {
+        toast.info('No products found. Add products from the admin dashboard.');
+      }
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const addToCart = (product: Product) => {
+    const unitPrice = product.price.sale && product.price.sale < product.price.regular
+      ? product.price.sale
+      : product.price.regular;
+    const cartItem: CartItem = {
+      id: product.id,
+      title: product.title,
+      imageUrl: product.images?.[0]?.url || product.imageUrl || '',
+      category: product.category,
+      price: unitPrice,
+      quantity: 1,
+    };
+    const newCart = [...cartItems, cartItem];
     setCartItems(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
+    toast.success('Added to cart');
   };
 
   const featuredProducts = products.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F5C6D1]/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet</h1>
-                <p className="text-xs text-gray-600">Handmade with Love</p>
-              </div>
-            </Link>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-[#F5C6D1] font-medium">Home</Link>
-              <Link to="/shop" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Shop</Link>
-              <Link to="/about" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">About</Link>
-              <Link to="/contact" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Contact</Link>
-              {user?.role === 'admin' && (
-                <Link to="/admin" className="text-[#F5C6D1] hover:text-[#F5C6D1]/80 transition-colors font-medium">Admin</Link>
-              )}
-            </nav>
-            
-            <div className="flex items-center space-x-3">
-              <CartDrawer>
-                <Button variant="ghost" size="sm">
-                  <ShoppingBag className="w-5 h-5" />
-                </Button>
-              </CartDrawer>
-              
-              {user ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600 hidden sm:inline">
-                    Welcome, {user.full_name || user.username}
-                  </span>
-                  {user.role === 'admin' && (
-                    <Badge className="bg-[#F5C6D1] text-[#2B2B2B]">Admin</Badge>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={logout}>
-                    <User className="w-5 h-5" />
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">
-                    <LogIn className="w-5 h-5 mr-1" />
-                    Login
-                  </Link>
-                </Button>
-              )}
-              
-              <Button variant="ghost" size="sm" asChild>
-                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-5 h-5" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="home" />
 
       {/* Hero Section */}
       <section className="py-16 px-4">
@@ -163,15 +139,28 @@ export default function Index() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={addToCart}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredProducts.map((product) => (
+                <ProductCard
+                  key={product._id || product.id}
+                  product={product}
+                  onAddToCart={addToCart}
+                />
+              ))}
+            </div>
+          )}
           
           <div className="text-center mt-12">
             <Button size="lg" asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">

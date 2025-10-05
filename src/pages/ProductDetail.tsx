@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { products } from '@/data/products';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Clock, Heart, Instagram, Package, ShoppingCart } from 'lucide-react';
+import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, ShoppingCart, Heart, Instagram, Clock, Package, ShoppingBag } from 'lucide-react';
 import { CartItem } from '@/types/cart';
-import CartDrawer from "@/components/CartDrawer";
+import { productsAPI } from '@/lib/api';
+import { Product } from '@/types/product';
+import { transformProduct } from '@/lib/transformProduct';
+import { toast } from 'sonner';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
-  
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('cart');
@@ -22,28 +26,52 @@ export default function ProductDetail() {
     }
   }, []);
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3] flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#2B2B2B] mb-4">Product not found</h1>
-          <Button asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
-            <Link to="/shop">Back to Shop</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) {
+        setProduct(null);
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setError(null);
+        setIsLoading(true);
+        const response = await productsAPI.getById(id);
+        setProduct(transformProduct(response.data.data));
+      } catch (err: any) {
+        console.error('Error fetching product:', err);
+        const message = err?.message || 'Failed to load product details';
+        setError(message);
+        toast.error(message);
+        setProduct(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
 
   const addToCart = () => {
-    const newCart = [...cartItems, { ...product, quantity: 1 }];
+    if (!product) return;
+    const unitPrice = product.price.sale && product.price.sale < product.price.regular
+      ? product.price.sale
+      : product.price.regular;
+    const cartItem: CartItem = {
+      id: product.id,
+      title: product.title,
+      imageUrl: product.images?.[0]?.url || product.imageUrl || '',
+      category: product.category,
+      price: unitPrice,
+      quantity: 1,
+    };
+    const newCart = [...cartItems, cartItem];
     setCartItems(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
     setIsAddedToCart(true);
     setTimeout(() => setIsAddedToCart(false), 2000);
   };
 
-  const getAvailabilityColor = (availability: string) => {
+  const getAvailabilityColor = (availability?: string) => {
     switch (availability) {
       case 'In Stock':
         return 'bg-green-100 text-green-800 border-green-200';
@@ -56,44 +84,34 @@ export default function ProductDetail() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-[#F5C6D1] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-lg text-[#2B2B2B]">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-[#2B2B2B] mb-4">Product not found</h1>
+          {error && <p className="text-sm text-gray-600 max-w-sm mx-auto">{error}</p>}
+          <Button asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
+            <Link to="/shop">Back to Shop</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F5C6D1]/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet</h1>
-                <p className="text-xs text-gray-600">Handmade with Love</p>
-              </div>
-            </Link>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Home</Link>
-              <Link to="/shop" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Shop</Link>
-              <Link to="/about" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">About</Link>
-              <Link to="/contact" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Contact</Link>
-            </nav>
-            
-            <div className="flex items-center space-x-3">
-              <CartDrawer>
-                <Button variant="ghost" size="sm">
-                  <ShoppingBag className="w-5 h-5" />
-                </Button>
-              </CartDrawer>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-5 h-5" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="shop" />
 
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
@@ -120,24 +138,25 @@ export default function ProductDetail() {
           <div className="space-y-4">
             <div className="aspect-square rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm shadow-lg">
               <img
-                src={product.imageUrl}
-                alt={product.title}
+                src={product.images?.[0]?.url || product.imageUrl || ''}
+                alt={product.images?.[0]?.alt || product.title}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
             
-            {/* Additional product images would go here */}
-            <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-white/60 border-2 border-transparent hover:border-[#F5C6D1] cursor-pointer transition-colors">
-                  <img
-                    src={product.imageUrl}
-                    alt={`${product.title} view ${i}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {product.images && product.images.length > 1 && (
+              <div className="grid grid-cols-4 gap-2">
+                {product.images.map((img, index) => (
+                  <div key={`${img.url}-${index}`} className="aspect-square rounded-lg overflow-hidden bg-white/60 border-2 border-transparent hover:border-[#F5C6D1] cursor-pointer transition-colors">
+                    <img
+                      src={img.url}
+                      alt={img.alt || `${product.title} view ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -153,7 +172,9 @@ export default function ProductDetail() {
               <h1 className="text-3xl font-bold text-[#2B2B2B] mb-4">{product.title}</h1>
               
               <div className="flex items-baseline space-x-2 mb-4">
-                <span className="text-3xl font-bold text-[#2B2B2B]">₹{product.price}</span>
+                <span className="text-3xl font-bold text-[#2B2B2B]">
+                  ₹{(product.price.sale && product.price.sale < product.price.regular ? product.price.sale : product.price.regular)}
+                </span>
                 <span className="text-sm text-gray-500">INR</span>
               </div>
               

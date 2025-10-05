@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+export const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_BASE_URL || '/api';
+export const ORIGIN_BASE_URL: string = API_BASE_URL.replace(/\/api\/?$/, '');
 
 // Create axios instance with default config
 const api = axios.create({
@@ -48,45 +49,19 @@ export const productsAPI = {
 };
 
 // Orders API
-export const ordersAPI = {
-  create: (orderData: {
-    items: any[];
-    shipping_info: any;
-    user_id?: number;
-  }) => api.post('/orders', orderData),
-  
-  getAll: () => api.get('/orders'),
-  updateStatus: (id: string, status: string) => 
-    api.put(`/orders/${id}/status`, { status }),
-};
-
-// Profile API
-export const profileAPI = {
-  get: () => api.get('/profile'),
-  update: (profileData: {
-    full_name: string;
-    phone: string;
-    address: string;
-  }) => api.put('/profile', profileData),
-};
-
-// Dashboard API
-export const dashboardAPI = {
-  getStats: () => api.get('/dashboard/stats'),
-};
 
 // File upload API
 export const uploadAPI = {
   uploadFile: (file: File) => {
     const formData = new FormData();
-    formData.append('file', file);
+    // Backend expects 'image'
+    formData.append('image', file);
     return api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 };
 
-// Test API connection
-export const testAPI = () => api.get('/test');
+// (intentionally left minimal) add additional API modules as needed
 
 export default api;

@@ -33,6 +33,11 @@ export default defineConfig({
             console.log('[Vite Proxy] Response:', proxyRes.statusCode, req.url);
           });
         }
+      },
+      '/uploads': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        secure: false,
       }
     }
   },

@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
-import { products, categories, Product } from '@/data/products';
+import { categories } from '@/data/products';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, SlidersHorizontal, Heart, Instagram, ShoppingBag } from 'lucide-react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { CartItem } from '@/types/cart';
-import CartDrawer from '@/components/CartDrawer';
+import { useAuth } from '@/contexts/AuthContext';
+import Header from '@/components/Header';
+import { productsAPI } from '@/lib/api';
+import { toast } from 'sonner';
+import { Product } from '@/types/product';
+import { transformProducts } from '@/lib/transformProduct';
 
 export default function Shop() {
   const [searchParams] = useSearchParams();
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('new');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const saved = localStorage.getItem('cart');
@@ -24,6 +32,27 @@ export default function Shop() {
       setCartItems(JSON.parse(saved));
     }
   }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await productsAPI.getAll();
+      const productsData = transformProducts(response.data.data || []);
+      if (!productsData.length) {
+        toast.info('No products found. Add products from the admin dashboard.');
+      }
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = [...products];
@@ -37,17 +66,17 @@ export default function Shop() {
     if (searchQuery) {
       filtered = filtered.filter(product =>
         product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.shortDescription.toLowerCase().includes(searchQuery.toLowerCase())
+        (product.shortDescription || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Sort products
     switch (sortBy) {
       case 'price_asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => (a.price.regular ?? 0) - (b.price.regular ?? 0));
         break;
       case 'price_desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => (b.price.regular ?? 0) - (a.price.regular ?? 0));
         break;
       case 'new':
       default:
@@ -56,58 +85,34 @@ export default function Shop() {
     }
 
     setFilteredProducts(filtered);
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [searchQuery, selectedCategory, sortBy, products]);
 
   const addToCart = (product: Product) => {
-    const newCart = [...cartItems, { ...product, quantity: 1 }];
+    const unitPrice = product.price.sale && product.price.sale < product.price.regular
+      ? product.price.sale
+      : product.price.regular;
+    const cartItem: CartItem = {
+      id: product.id,
+      title: product.title,
+      imageUrl: product.images?.[0]?.url || product.imageUrl || '',
+      category: product.category,
+      price: unitPrice,
+      quantity: 1,
+    };
+    const newCart = [...cartItems, cartItem];
     setCartItems(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
+    toast.success('Added to cart');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F5C6D1]/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet</h1>
-                <p className="text-xs text-gray-600">Handmade with Love</p>
-              </div>
-            </Link>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Home</Link>
-              <Link to="/shop" className="text-[#F5C6D1] font-medium">Shop</Link>
-              <Link to="/about" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">About</Link>
-              <Link to="/contact" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Contact</Link>
-            </nav>
-            
-            <div className="flex items-center space-x-3">
-              <CartDrawer>
-                <Button variant="ghost" size="sm">
-                  <ShoppingBag className="w-5 h-5" />
-                </Button>
-              </CartDrawer>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="https://instagram.com/bloom_with_nilu" target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-5 h-5" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="shop" />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#2B2B2B] mb-2">Shop Collection</h1>
-          <p className="text-gray-600">Discover our handcrafted crochet creations</p>
         </div>
 
         {/* Filters and Search */}
@@ -187,11 +192,22 @@ export default function Shop() {
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.id}
+                key={product._id || product.id}
                 product={product}
                 onAddToCart={addToCart}
               />
@@ -202,17 +218,26 @@ export default function Shop() {
             <div className="w-24 h-24 mx-auto mb-6 bg-[#F5C6D1]/20 rounded-full flex items-center justify-center">
               <Search className="w-12 h-12 text-[#F5C6D1]" />
             </div>
-            <h3 className="text-xl font-semibold text-[#2B2B2B] mb-2">No products found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your search or filters</p>
-            <Button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-              }}
-              className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]"
-            >
-              Clear Filters
-            </Button>
+            <h3 className="text-xl font-semibold text-[#2B2B2B] mb-2">
+              {products.length === 0 ? 'No products available' : 'No products found'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {products.length === 0 
+                ? 'Check back soon for our amazing crochet collection!' 
+                : 'Try adjusting your search or filters'
+              }
+            </p>
+            {products.length > 0 && (
+              <Button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                }}
+                className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         )}
       </div>

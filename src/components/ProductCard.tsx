@@ -1,15 +1,15 @@
-import React from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Product } from "../data/products";
+import { Product } from "@/types/product";
 import { ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
+  onAddToCart?: (product: Product) => void;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   return (
     <Card className="overflow-hidden transition-all hover:shadow-lg">
       <Link to={`/product/${product.id}`}>
@@ -25,7 +25,9 @@ export function ProductCard({ product }: ProductCardProps) {
         <CardTitle className="text-lg font-medium">{product.title}</CardTitle>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{product.category}</span>
-          <span className="font-bold">₹{product.price}</span>
+          <span className="font-bold">
+            ₹{typeof product.price === 'object' ? (product.price.regular || product.price.sale) : product.price}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pb-2">
@@ -37,7 +39,11 @@ export function ProductCard({ product }: ProductCardProps) {
         <span className="text-xs text-muted-foreground">
           {product.availability}
         </span>
-        <Button size="sm" className="gap-2">
+        <Button 
+          size="sm" 
+          className="gap-2"
+          onClick={() => onAddToCart?.(product)}
+        >
           <ShoppingCart className="h-4 w-4" />
           Add to Cart
         </Button>

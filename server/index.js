@@ -1,10 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import path from 'path';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 
@@ -15,6 +14,8 @@ import Order from './models/Order.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
+import uploadRoutes from './routes/uploads.js';
+import productRoutes from './routes/products.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,10 +57,14 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving (basic implementation)
-const uploadsDir = join(__dirname, '../uploads');
+// Static file serving for uploads (Render-friendly)
+const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+const productUploadsDir = path.join(uploadsDir, 'products');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(productUploadsDir)) {
+  fs.mkdirSync(productUploadsDir, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsDir));
 
@@ -104,40 +109,11 @@ const initializeAdmin = async () => {
   }
 };
 
-// Authentication middleware
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      return res.status(403).json({ error: 'User not found' });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
-};
-
-// Admin middleware
-const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-};
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/products', productRoutes);
 
 // Health check endpoint - must be after CORS middleware but before error handling
 app.get('/api/health', async (req, res) => {
@@ -160,41 +136,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Dashboard stats (admin only)
-app.get('/api/dashboard/stats', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const [
-      totalProducts,
-      totalOrders,
-      totalCustomers,
-      totalRevenue,
-      recentOrders
-    ] = await Promise.all([
-      Product.countDocuments({ isActive: true }),
-      Order.countDocuments(),
-      User.countDocuments({ role: 'customer' }),
-      Order.aggregate([
-        { $match: { status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$pricing.total' } } }
-      ]),
-      Order.find()
-        .populate('customer', 'username profile.full_name')
-        .sort({ createdAt: -1 })
-        .limit(5)
-    ]);
-    
-    res.json({
-      totalProducts,
-      totalOrders,
-      totalCustomers,
-      totalRevenue: totalRevenue[0]?.total || 0,
-      recentOrders
-    });
-  } catch (error) {
-    console.error('Fetch stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
 
 // Handle 404 for API routes
 app.use('/api', (req, res) => {

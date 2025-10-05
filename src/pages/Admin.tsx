@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,15 +7,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Heart, Plus, Edit, Trash2, Package, ShoppingBag, Users, TrendingUp } from 'lucide-react';
-import { Product, categories } from '@/data/products';
+import { Plus, Edit, Trash2, Package, ShoppingBag, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { categories } from '@/data/products';
+import { Product } from '@/types/product';
+import ImageUpload from '@/components/ImageUpload';
+import { productsAPI } from '@/lib/api';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import Header from '@/components/Header';
+import { transformProducts } from '@/lib/transformProduct';
 
 export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     category: 'Flowers' as Product['category'],
@@ -28,22 +37,26 @@ export default function Admin() {
   });
 
   useEffect(() => {
-    // Load products from localStorage or use default data
-    const savedProducts = localStorage.getItem('admin_products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    } else {
-      // Import default products
-      import('@/data/products').then(({ products: defaultProducts }) => {
-        setProducts(defaultProducts);
-        localStorage.setItem('admin_products', JSON.stringify(defaultProducts));
-      });
+    // Check if user is admin
+    if (!user || user.role !== 'admin') {
+      navigate('/login');
+      return;
     }
-  }, []);
+    loadProducts();
+  }, [user, navigate]);
 
-  const saveProducts = (newProducts: Product[]) => {
-    setProducts(newProducts);
-    localStorage.setItem('admin_products', JSON.stringify(newProducts));
+  const loadProducts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await productsAPI.getAll();
+      const productsData = transformProducts(response.data.data || []);
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -74,53 +87,61 @@ export default function Admin() {
     setEditingProduct(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const productData: Product = {
-      id: editingProduct?.id || `P${String(products.length + 1).padStart(3, '0')}`,
-      title: formData.title,
-      category: formData.category,
-      price: parseInt(formData.price),
-      availability: formData.availability,
-      shortDescription: formData.shortDescription,
-      leadTime: formData.leadTime,
-      sku: formData.sku,
-      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop'
-    };
+    try {
+      const fd = new FormData();
+      fd.append('title', formData.title);
+      fd.append('category', formData.category || '');
+      fd.append('price', formData.price);
+      fd.append('availability', formData.availability || '');
+      fd.append('shortDescription', formData.shortDescription || '');
+      fd.append('leadTime', formData.leadTime || '');
+      fd.append('sku', formData.sku || '');
+      if (formData.imageUrl) fd.append('imageUrl', formData.imageUrl);
 
-    if (editingProduct) {
-      // Update existing product
-      const newProducts = products.map(p => p.id === editingProduct.id ? productData : p);
-      saveProducts(newProducts);
-    } else {
-      // Add new product
-      saveProducts([...products, productData]);
+      if (editingProduct) {
+        await productsAPI.update(editingProduct.id, fd);
+        toast.success('Product updated successfully');
+      } else {
+        await productsAPI.create(fd);
+        toast.success('Product added successfully');
+      }
+
+      await loadProducts();
+      resetForm();
+      setIsAddDialogOpen(false);
+    } catch (err: any) {
+      console.error('Save product error:', err);
+      toast.error(err?.message || 'Failed to save product');
     }
-
-    resetForm();
-    setIsAddDialogOpen(false);
   };
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setFormData({
       title: product.title,
-      category: product.category,
-      price: product.price.toString(),
-      availability: product.availability,
-      shortDescription: product.shortDescription,
-      leadTime: product.leadTime,
-      sku: product.sku,
-      imageUrl: product.imageUrl
+      category: product.category || 'Custom',
+      price: (typeof product.price === 'object' ? (product.price.regular || 0) : product.price).toString(),
+      availability: product.availability || 'Made to Order',
+      shortDescription: product.shortDescription || '',
+      leadTime: product.leadTime || '7-10 days',
+      sku: product.sku || '',
+      imageUrl: product.imageUrl || ''
     });
     setIsAddDialogOpen(true);
   };
 
-  const handleDelete = (productId: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      const newProducts = products.filter(p => p.id !== productId);
-      saveProducts(newProducts);
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await productsAPI.delete(productId);
+      await loadProducts();
+      toast.success('Product deleted successfully');
+    } catch (err: any) {
+      console.error('Delete product error:', err);
+      toast.error(err?.message || 'Failed to delete product');
     }
   };
 
@@ -131,34 +152,10 @@ export default function Admin() {
     limitedEdition: products.filter(p => p.availability === 'Limited Edition').length
   };
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F6F0EB] via-white to-[#E8F6F3]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F5C6D1]/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#F5C6D1] to-[#C7D8C7] rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-[#2B2B2B]">Nilu' Crochet Admin</h1>
-                <p className="text-xs text-gray-600">Product Management</p>
-              </div>
-            </Link>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Home</Link>
-              <Link to="/shop" className="text-[#2B2B2B] hover:text-[#F5C6D1] transition-colors">Shop</Link>
-              <span className="text-[#F5C6D1] font-medium">Admin</span>
-            </nav>
-            
-            <Button asChild className="bg-[#F5C6D1] hover:bg-[#F5C6D1]/80 text-[#2B2B2B]">
-              <Link to="/">Back to Site</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="admin" />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
@@ -167,8 +164,16 @@ export default function Admin() {
           <p className="text-gray-600">Manage your crochet product catalog</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-[#F5C6D1]" />
+            <span className="ml-3 text-lg">Loading products...</span>
+          </div>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -299,6 +304,37 @@ export default function Admin() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label>Product Image</Label>
+                    <div className="mt-1">
+                      <ImageUpload
+                        onUploadSuccess={(imageUrl) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            imageUrl: imageUrl
+                          }));
+                        }}
+                        onUploadError={(error) => {
+                          console.error('Upload failed:', error);
+                          alert(`Upload failed: ${error}`);
+                        }}
+                        buttonText={formData.imageUrl ? 'Change Image' : 'Upload Image'}
+                        className="mt-1"
+                      />
+                    </div>
+                    {formData.imageUrl && (
+                      <div className="mt-2">
+                        <img 
+                          src={formData.imageUrl} 
+                          alt="Preview" 
+                          className="h-32 w-32 object-cover rounded-md border border-gray-200"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="shortDescription">Short Description *</Label>
                   <Textarea
@@ -338,18 +374,6 @@ export default function Admin() {
                       placeholder="e.g., NC-FL-001"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    name="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={handleInputChange}
-                    className="border-[#F5C6D1]/30 focus:border-[#F5C6D1]"
-                    placeholder="https://example.com/image.jpg (optional - will use default if empty)"
-                  />
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
@@ -397,7 +421,7 @@ export default function Admin() {
                       </div>
                       <p className="text-sm text-gray-600 truncate">{product.shortDescription}</p>
                       <div className="flex items-center space-x-4 mt-2 text-sm">
-                        <span className="font-semibold text-[#2B2B2B]">₹{product.price}</span>
+                        <span className="font-semibold text-[#2B2B2B]">₹{typeof product.price === 'object' ? (product.price.regular || 0) : product.price}</span>
                         <span className="text-gray-500">{product.sku}</span>
                         <Badge 
                           className={`text-xs ${
@@ -437,6 +461,8 @@ export default function Admin() {
             </div>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
     </div>
   );
