@@ -2,10 +2,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Instagram, ShoppingBag, Sparkles, Award, Clock, Users } from 'lucide-react';
-// import { CartDrawer } from '@/components/CartDrawer';
+import { Heart, Instagram, ShoppingBag, Sparkles, Award, Users } from 'lucide-react';
 import CartDrawer from "@/components/CartDrawer";
-
 
 export default function About() {
   return (

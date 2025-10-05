@@ -34,7 +34,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           />
         </Link>
         <div className="absolute top-3 left-3">
-          <Badge className={`text-xs ${getAvailabilityColor(product.availability)}`}>
+          <Badge className={`text-xs ${getAvailabilityColor(product.availability || '')}`}>
             {product.availability}
           </Badge>
         </div>
@@ -62,7 +62,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <div className="flex items-center justify-between pt-2">
             <div>
               <span className="text-lg font-semibold text-[#2B2B2B]">
-                ₹{product.price}
+                ₹{(product.price.sale && product.price.sale < product.price.regular) ? product.price.sale : product.price.regular}
               </span>
               <p className="text-xs text-gray-500">{product.leadTime}</p>
             </div>

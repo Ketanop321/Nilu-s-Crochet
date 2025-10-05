@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { CartItem } from '@/types/cart';
-import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import { productsAPI } from '@/lib/api';
 import { toast } from 'sonner';
@@ -24,7 +23,6 @@ export default function Shop() {
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('new');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const { user } = useAuth();
 
   useEffect(() => {
     const saved = localStorage.getItem('cart');

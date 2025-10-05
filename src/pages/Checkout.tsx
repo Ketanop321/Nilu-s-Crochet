@@ -5,12 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ShoppingBag, CreditCard, Truck, CheckCircle, Heart, Instagram } from 'lucide-react';
 import { CartItem } from '@/types/cart';
 import CartDrawer from "@/components/CartDrawer";
-
 // import { CartDrawer } from '@/components/CartDrawer';
 
 export default function Checkout() {

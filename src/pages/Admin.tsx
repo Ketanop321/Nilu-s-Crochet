@@ -123,7 +123,7 @@ export default function Admin() {
     setFormData({
       title: product.title,
       category: product.category || 'Custom',
-      price: (typeof product.price === 'object' ? (product.price.regular || 0) : product.price).toString(),
+      price: (product.price?.regular ?? 0).toString(),
       availability: product.availability || 'Made to Order',
       shortDescription: product.shortDescription || '',
       leadTime: product.leadTime || '7-10 days',
@@ -421,7 +421,7 @@ export default function Admin() {
                       </div>
                       <p className="text-sm text-gray-600 truncate">{product.shortDescription}</p>
                       <div className="flex items-center space-x-4 mt-2 text-sm">
-                        <span className="font-semibold text-[#2B2B2B]">₹{typeof product.price === 'object' ? (product.price.regular || 0) : product.price}</span>
+                        <span className="font-semibold text-[#2B2B2B]">₹{product.price?.regular ?? 0}</span>
                         <span className="text-gray-500">{product.sku}</span>
                         <Badge 
                           className={`text-xs ${

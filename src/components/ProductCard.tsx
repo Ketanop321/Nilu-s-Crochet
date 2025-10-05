@@ -26,7 +26,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{product.category}</span>
           <span className="font-bold">
-            ₹{typeof product.price === 'object' ? (product.price.regular || product.price.sale) : product.price}
+            ₹{(product.price.sale && product.price.sale < product.price.regular) ? product.price.sale : product.price.regular}
           </span>
         </div>
       </CardHeader>
