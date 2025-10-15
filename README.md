@@ -113,3 +113,7 @@ The app uses `VITE_API_BASE_URL` at runtime for all API requests and to render a
 
 Copy them to `.env` and `server/.env` and fill values before deploying.
 
+
+## Repo Activity
+
+![Nilus Crochet](https://repobeats.axiom.co/api/embed/ad5134e8f35af64bdd7b8245bb3c1b9e17362a9f.svg "Repobeats analytics image")
