@@ -22,7 +22,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-
   return (
     <Card className="group overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm">
       <div className="relative overflow-hidden">
@@ -30,7 +29,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <img
             src={product.imageUrl}
             alt={product.title}
-            className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </Link>
         <div className="absolute top-3 left-3">

@@ -17,6 +17,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <img
             src={product.imageUrl}
             alt={product.title}
+            loading="lazy"
             className="h-full w-full object-cover transition-transform hover:scale-105"
           />
         </div>

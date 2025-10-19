@@ -3,9 +3,32 @@ import axios from 'axios';
 export const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_BASE_URL || '/api';
 export const ORIGIN_BASE_URL: string = API_BASE_URL.replace(/\/api\/?$/, '');
 
+// Error helper to extract meaningful messages from API responses
+export const getErrorMessage = (error: any): string => {
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+  if (error?.response?.data?.error) {
+    const errorMsg = error.response.data.error;
+    // Handle specific MongoDB errors
+    if (typeof errorMsg === 'string' && errorMsg.includes('E11000 duplicate key')) {
+      if (errorMsg.includes('sku')) {
+        return 'SKU already exists. Please choose a different SKU.';
+      }
+      return 'This item already exists. Please use different values.';
+    }
+    return errorMsg;
+  }
+  if (error?.message) {
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+};
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,6 +42,22 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor for centralized error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle network errors
+    if (!error.response) {
+      error.message = 'Network error. Please check your connection.';
+    }
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      error.message = 'Request timeout. Please try again.';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth API
 export const authAPI = {

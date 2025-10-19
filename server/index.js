@@ -26,7 +26,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'nilu-crochet-secret-key-2024';
 
 // Services will be initialized when needed
 
-// Middleware
+// Security and performance middleware
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -54,6 +54,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

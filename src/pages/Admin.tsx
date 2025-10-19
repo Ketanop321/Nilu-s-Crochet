@@ -12,7 +12,7 @@ import { Plus, Edit, Trash2, Package, ShoppingBag, Users, TrendingUp, Loader2 } 
 import { categories } from '@/data/products';
 import { Product } from '@/types/product';
 import ImageUpload from '@/components/ImageUpload';
-import { productsAPI } from '@/lib/api';
+import { productsAPI, getErrorMessage } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -114,7 +114,7 @@ export default function Admin() {
       setIsAddDialogOpen(false);
     } catch (err: any) {
       console.error('Save product error:', err);
-      toast.error(err?.message || 'Failed to save product');
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -141,7 +141,7 @@ export default function Admin() {
       toast.success('Product deleted successfully');
     } catch (err: any) {
       console.error('Delete product error:', err);
-      toast.error(err?.message || 'Failed to delete product');
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -317,7 +317,7 @@ export default function Admin() {
                         }}
                         onUploadError={(error) => {
                           console.error('Upload failed:', error);
-                          alert(`Upload failed: ${error}`);
+                          toast.error(`Upload failed: ${error}`);
                         }}
                         buttonText={formData.imageUrl ? 'Change Image' : 'Upload Image'}
                         className="mt-1"
@@ -409,6 +409,7 @@ export default function Admin() {
                     <img
                       src={product.imageUrl}
                       alt={product.title}
+                      loading="lazy"
                       className="w-16 h-16 object-cover rounded-lg"
                     />
                     

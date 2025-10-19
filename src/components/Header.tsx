@@ -87,7 +87,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             {user ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600 hidden sm:inline">
-                  Welcome, {user.full_name || user.username}
+                  Welcome, {user.profile?.full_name || user.full_name || user.username}
                 </span>
                 {user.role === 'admin' && (
                   <Badge className="bg-[#F5C6D1] text-[#2B2B2B]">Admin</Badge>

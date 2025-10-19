@@ -3,7 +3,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Loader2, Upload } from 'lucide-react';
-import { uploadAPI, ORIGIN_BASE_URL } from '@/lib/api';
+import { uploadAPI, ORIGIN_BASE_URL, getErrorMessage } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface ImageUploadProps {
   onUploadSuccess: (imageUrl: string) => void;
@@ -27,13 +28,17 @@ export default function ImageUpload({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      onUploadError?.('Please select a valid image file (JPEG, PNG, etc.)');
+      const errorMsg = 'Please select a valid image file (JPEG, PNG, etc.)';
+      onUploadError?.(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      onUploadError?.('Image size should be less than 5MB');
+      const errorMsg = 'Image size should be less than 5MB';
+      onUploadError?.(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
@@ -51,7 +56,9 @@ export default function ImageUpload({
       onUploadSuccess(absolute);
     } catch (error) {
       console.error('Upload error:', error);
-      onUploadError?.(error instanceof Error ? error.message : 'Failed to upload image');
+      const errorMsg = getErrorMessage(error);
+      onUploadError?.(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

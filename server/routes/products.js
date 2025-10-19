@@ -241,6 +241,18 @@ router.post('/', authenticate, authorize('admin'), upload.array('images', 5), as
     });
   } catch (error) {
     console.error('Error creating product:', error);
+    
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      const fieldName = field === 'sku' ? 'SKU' : field;
+      return res.status(409).json({
+        success: false,
+        message: `${fieldName} already exists`,
+        error: `Duplicate ${fieldName.toLowerCase()}`
+      });
+    }
+    
     res.status(400).json({
       success: false,
       message: 'Error creating product',
@@ -295,6 +307,18 @@ router.put('/:id', authenticate, authorize('admin'), upload.array('images', 5), 
     });
   } catch (error) {
     console.error('Error updating product:', error);
+    
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      const fieldName = field === 'sku' ? 'SKU' : field;
+      return res.status(409).json({
+        success: false,
+        message: `${fieldName} already exists`,
+        error: `Duplicate ${fieldName.toLowerCase()}`
+      });
+    }
+    
     res.status(400).json({
       success: false,
       message: 'Error updating product',

@@ -1,10 +1,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI, getErrorMessage } from '@/lib/api';
 
 interface User {
   id: string;
   username: string;
   email: string;
   role: 'admin' | 'customer';
+  profile?: {
+    full_name?: string;
+    phone?: string;
+    avatar?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+      country?: string;
+    };
+  };
+  // Legacy support for direct full_name property
   full_name?: string;
   avatar?: string;
 }
@@ -52,69 +66,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include',
-      });
+      const { data } = await authAPI.login({ username, password });
 
-      const data = await response.json().catch(() => ({}));
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-      
-      if (!data.token) {
+      if (!data?.token) {
         throw new Error('No authentication token received');
       }
-      
-      // Store auth data
+
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
-      
+
       setUser(data.user);
       return data;
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error(error instanceof Error ? error.message : 'An error occurred during login');
+      throw new Error(getErrorMessage(error));
     }
   };
 
   const register = async (userData: RegisterData) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(userData),
-        credentials: 'include',
-      });
+      const { data } = await authAPI.register(userData);
 
-      const data = await response.json().catch(() => ({}));
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-      
-      if (!data.token) {
+      if (!data?.token) {
         throw new Error('No authentication token received after registration');
       }
-      
-      // Store auth data
+
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
-      
+
       setUser(data.user);
       return data;
     } catch (error) {
       console.error('Registration error:', error);
-      throw new Error(error instanceof Error ? error.message : 'An error occurred during registration');
+      throw new Error(getErrorMessage(error));
     }
   };
 
