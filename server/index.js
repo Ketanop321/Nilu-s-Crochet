@@ -38,6 +38,8 @@ const corsOptions = {
       'http://localhost:5176',
       'http://127.0.0.1:5175',
       'http://127.0.0.1:5176',
+      'https://nilucrochet.vercel.app',
+      'https://nilu-crochet.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
