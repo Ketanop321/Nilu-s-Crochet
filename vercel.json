@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "dist/**": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
