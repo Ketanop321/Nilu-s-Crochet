@@ -1,13 +1,7 @@
 {
-  "functions": {
-    "dist/**": {
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "https://nilu-s-crochet.onrender.com/api/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
