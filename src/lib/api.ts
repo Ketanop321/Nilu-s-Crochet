@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-export const API_BASE_URL: string = (import.meta as any)?.env?.VITE_API_BASE_URL || '/api';
+// Force production API URL for deployment
+const PRODUCTION_API_URL = 'https://nilu-s-crochet.onrender.com/api';
+const DEV_API_URL = '/api';
+
+export const API_BASE_URL: string = 
+  (import.meta as any)?.env?.VITE_API_BASE_URL || 
+  ((import.meta as any).env?.PROD ? PRODUCTION_API_URL : DEV_API_URL);
+
 export const ORIGIN_BASE_URL: string = API_BASE_URL.replace(/\/api\/?$/, '');
 
 // Error helper to extract meaningful messages from API responses
